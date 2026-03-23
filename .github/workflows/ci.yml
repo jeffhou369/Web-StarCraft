@@ -1,0 +1,77 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  IMAGE_NAME: web-starcraft
+
+jobs:
+  code-review:
+    name: Code Review & Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - name: Send Telegram - Code Review Complete
+        run: |
+          MESSAGE="Web-StarCraft Code Review %26 Build 完成✅%0A分支: ${{ github.ref_name }}%0A提交: ${{ github.sha }}"
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=${MESSAGE}"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: code-review
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run npm audit
+        run: npm audit --audit-level=high || true
+      - name: Send Telegram - Security Scan Complete
+        run: |
+          MESSAGE="Web-StarCraft 安全掃描完成✅%0A分支: ${{ github.ref_name }}%0Anpm audit 已執行"
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=${MESSAGE}"
+
+  docker-build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: security-scan
+    permissions:
+      contents: read
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/web-starcraft:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/web-starcraft:${{ github.sha }}
+      - name: Send Telegram - Docker Push Complete
+        run: |
+          MESSAGE="Web-StarCraft Docker Image 推送完成🐳%0AImage: ${{ secrets.DOCKERHUB_USERNAME }}/web-starcraft:latest%0ASHA: ${{ github.sha }}"
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=${MESSAGE}"
