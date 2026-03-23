@@ -1,5 +1,5 @@
 import type { GameState, Unit, Building, Resource, Vec2, Player } from './types'
-import { UNIT_DEFS, BUILDING_DEFS, RACE_MAIN_BUILDING, RACE_WORKER, PRODUCTION_TIME } from './constants'
+import { UNIT_DEFS, BUILDING_DEFS, RACE_MAIN_BUILDING, RACE_WORKER, PRODUCTION_TIME, VIEWPORT_W, VIEWPORT_H } from './constants'
 import { audioSystem } from './audio'
 
 let idCounter = 1
@@ -551,8 +551,8 @@ export class GameEngine {
   getState() { return this.state }
 
   scrollCamera(dx: number, dy: number) {
-    const maxX = this.state.map.width * this.state.map.tileSize - 960
-    const maxY = this.state.map.height * this.state.map.tileSize - 500
+    const maxX = this.state.map.width * this.state.map.tileSize - VIEWPORT_W
+    const maxY = this.state.map.height * this.state.map.tileSize - VIEWPORT_H
     this.state.cameraOffset.x = Math.max(0, Math.min(maxX, this.state.cameraOffset.x + dx))
     this.state.cameraOffset.y = Math.max(0, Math.min(maxY, this.state.cameraOffset.y + dy))
   }
