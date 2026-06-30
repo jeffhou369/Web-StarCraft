@@ -5,6 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -25,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Send Telegram - Code Review Complete
+        continue-on-error: true
         run: |
           MESSAGE="Web-StarCraft Code Review %26 Build 完成✅%0A分支: ${{ github.ref_name }}%0A提交: ${{ github.sha }}"
           curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=${MESSAGE}"
@@ -45,6 +47,7 @@ jobs:
       - name: Run npm audit
         run: npm audit --audit-level=high || true
       - name: Send Telegram - Security Scan Complete
+        continue-on-error: true
         run: |
           MESSAGE="Web-StarCraft 安全掃描完成✅%0A分支: ${{ github.ref_name }}%0Anpm audit 已執行"
           curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=${MESSAGE}"
@@ -72,6 +75,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/web-starcraft:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/web-starcraft:${{ github.sha }}
       - name: Send Telegram - Docker Push Complete
+        continue-on-error: true
         run: |
           MESSAGE="Web-StarCraft Docker Image 推送完成🐳%0AImage: ${{ secrets.DOCKERHUB_USERNAME }}/web-starcraft:latest%0ASHA: ${{ github.sha }}"
           curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=${MESSAGE}"
